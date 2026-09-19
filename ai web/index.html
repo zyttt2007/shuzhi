@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蔬知 · 蔬菜百科与食物相克查询</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #2ecc71;
+            --primary-dark: #27ae60;
+            --primary-light: #eafaf1;
+            --accent: #f39c12;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #27ae60;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --bg: #f8faf8;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 20px rgba(46, 204, 113, 0.1);
+            --shadow-hover: 0 8px 30px rgba(46, 204, 113, 0.2);
+        }
+
+        body {
+            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* ===== 顶部导航 ===== */
+        header {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: #fff;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        .logo span { font-size: 1.8rem; }
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 0.5rem;
+        }
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        nav a:hover, nav a.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* ===== 页面容器 ===== */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* ===== Hero 搜索区 ===== */
+        .hero {
+            background: linear-gradient(135deg, #eafaf1 0%, #d5f5e3 100%);
+            padding: 4rem 2rem 3rem;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 2.8rem;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+        .hero .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+        .search-container {
+            max-width: 640px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .search-box-wrapper {
+            display: flex;
+            background: #fff;
+            border-radius: 50px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .search-input-wrap {
+            position: relative;
+            flex: 1;
+        }
+        .search-icon {
+            position: absolute;
+            left: 1.2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: var(--text-light);
+            pointer-events: none;
+        }
+        .search-box {
+            width: 100%;
+            padding: 1rem 1.5rem 1rem 3rem;
+            font-size: 1.05rem;
+            border: none;
+            outline: none;
+        }
+        .search-btn {
+            padding: 0 2rem;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .search-btn:hover { background: var(--primary-dark); }
+
+        /* 搜索联想下拉 */
+        .suggest-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            overflow: hidden;
+            display: none;
+            z-index: 50;
+        }
+        .suggest-dropdown.active { display: block; }
+        .suggest-item {
+            padding: 0.8rem 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+        .suggest-item:last-child { border-bottom: none; }
+        .suggest-item:hover { background: var(--primary-light); }
+        .suggest-item .s-emoji { font-size: 1.3rem; }
+        .suggest-item .s-text { flex: 1; }
+        .suggest-item .s-name { font-weight: 600; }
+        .suggest-item .s-desc { font-size: 0.8rem; color: var(--text-light); }
+        .suggest-item .s-tag {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        /* 首页功能入口 */
+        .home-features {
+            max-width: 1200px;
+            margin: 2.5rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+        .feature-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.3s;
+            border-top: 4px solid var(--primary);
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+        .feature-card .f-icon { font-size: 3rem; margin-bottom: 0.8rem; }
+        .feature-card h3 { margin-bottom: 0.5rem; color: var(--primary-dark); }
+        .feature-card p { font-size: 0.9rem; color: var(--text-light); }
+        .feature-card.danger { border-top-color: var(--danger); }
+        .feature-card.danger h3 { color: var(--danger); }
+
+        /* ===== 分类筛选 ===== */
+        .page-header {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 2rem 0;
+        }
+        .page-header h2 {
+            font-size: 1.8rem;
+            color: var(--primary-dark);
+            margin-bottom: 0.3rem;
+        }
+        .page-header p { color: var(--text-light); }
+        .categories {
+            max-width: 1200px;
+            margin: 1.5rem auto 0;
+            padding: 0 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+        .category-btn {
+            padding: 0.6rem 1.5rem;
+            border: 2px solid var(--primary);
+            background: #fff;
+            color: var(--primary-dark);
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .category-btn:hover { background: var(--primary-light); }
+        .category-btn.active { background: var(--primary); color: #fff; }
+
+        /* 蔬菜卡片网格 */
+        .vegetable-grid {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.8rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-hover);
+        }
+        .card-img {
+            width: 100%;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .card-img::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .card-img .veg-emoji {
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+            transition: transform 0.3s ease;
+        }
+        .card:hover .card-img .veg-emoji { transform: scale(1.15) rotate(-5deg); }
+        .card-img img { width: 100%; height: 100%; object-fit: cover; }
+        .card-body { padding: 1.1rem; }
+        .card-category {
+            display: inline-block;
+            font-size: 0.72rem;
+            padding: 0.15rem 0.6rem;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border-radius: 10px;
+            margin-bottom: 0.4rem;
+        }
+        .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .card-desc {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .no-result {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        /* ===== 详情弹窗 ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #fff;
+            border-radius: 20px;
+            max-width: 720px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-img {
+            width: 100%;
+            height: 260px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 7rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .modal-img::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .modal-img img { width: 100%; height: 100%; object-fit: cover; }
+        .modal-body { padding: 1.8rem; position: relative; }
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        .modal-title { font-size: 1.7rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .modal-category { color: var(--primary-dark); font-weight: 600; margin-bottom: 1rem; font-size: 0.9rem; }
+        .modal-section { margin-top: 1.2rem; }
+        .modal-section h4 {
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.6rem;
+        }
+        .info-item {
+            background: #f8f9fa;
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+        .info-item .label { color: var(--text-light); font-size: 0.75rem; }
+        .info-item .value { font-weight: 600; margin-top: 0.15rem; }
+        .modal-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .tag {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        /* 相克/相宜 */
+        .incompatible-list, .compatible-list {
+            list-style: none;
+            padding: 0;
+        }
+        .incompatible-list li {
+            padding: 0.5rem 0.8rem;
+            margin-bottom: 0.4rem;
+            background: #fff0f0;
+            border-left: 3px solid var(--danger);
+            border-radius: 6px;
+            font-size: 0.88rem;
+            color: #c0392b;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        .compatible-list li {
+            padding: 0.5rem 0.8rem;
+            margin-bottom: 0.4rem;
+            background: #eafaf1;
+            border-left: 3px solid var(--success);
+            border-radius: 6px;
+            font-size: 0.88rem;
+            color: #1e8449;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        .notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.78rem;
+            color: #856404;
+            margin-top: 0.6rem;
+        }
+
+        /* ===== 相克查询页 ===== */
+        .check-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .check-boxes {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+        .check-input-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+            max-width: 320px;
+        }
+        .check-input-wrap input {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            font-size: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .check-input-wrap input:focus { border-color: var(--primary); }
+        .check-plus { font-size: 1.8rem; color: var(--text-light); }
+        .check-btn {
+            padding: 0.9rem 2rem;
+            background: var(--danger);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .check-btn:hover { background: #c0392b; }
+        .check-result {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 16px;
+            text-align: center;
+            display: none;
+        }
+        .check-result.show { display: block; }
+        .check-result.danger { background: #fff0f0; border: 2px solid var(--danger); }
+        .check-result.warning { background: #fff8e1; border: 2px solid var(--warning); }
+        .check-result.success { background: #eafaf1; border: 2px solid var(--success); }
+        .check-result .result-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+        .check-result .result-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .check-result.danger .result-title { color: var(--danger); }
+        .check-result.warning .result-title { color: var(--warning); }
+        .check-result.success .result-title { color: var(--success); }
+
+        .compat-summary {
+            max-width: 1200px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+        .compat-summary h3 {
+            color: var(--primary-dark);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        .compat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.2rem;
+        }
+        .compat-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+            box-shadow: var(--shadow);
+        }
+        .compat-card .pair {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+        }
+        .compat-card .reason { font-size: 0.82rem; color: var(--text-light); }
+        .compat-card.danger { border-left: 4px solid var(--danger); }
+        .compat-card.warning { border-left: 4px solid var(--warning); }
+        .compat-card.success { border-left: 4px solid var(--success); }
+
+        /* ===== 关于页 ===== */
+        .about-page {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+        .about-page h2 { color: var(--primary-dark); margin-bottom: 1rem; }
+        .about-page p { margin-bottom: 1rem; color: var(--text-light); line-height: 1.8; }
+        .about-page .feature-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+        .about-page .feature-list li {
+            padding: 0.6rem 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* ===== 页脚 ===== */
+        footer {
+            background: #2c3e50;
+            color: #bdc3c7;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+        footer p { margin: 0.3rem 0; font-size: 0.85rem; }
+
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 2rem; }
+            nav ul { gap: 0.2rem; }
+            nav a { padding: 0.4rem 0.6rem; font-size: 0.85rem; }
+            .check-boxes { flex-direction: column; }
+            .check-plus { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 顶部导航 -->
+    <header>
+        <div class="nav-container">
+            <div class="logo" onclick="switchPage('home')"><span>🥬</span> 蔬知</div>
+            <nav>
+                <ul>
+                    <li><a class="nav-link active" data-page="home" onclick="switchPage('home')">首页</a></li>
+                    <li><a class="nav-link" data-page="list" onclick="switchPage('list')">蔬菜大全</a></li>
+                    <li><a class="nav-link" data-page="check" onclick="switchPage('check')">食物相克对照表</a></li>
+                    <li><a class="nav-link" data-page="about" onclick="switchPage('about')">关于本站</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ===== 首页 ===== -->
+    <div class="page active" id="page-home">
+        <section class="hero">
+            <h1>🥬 蔬知</h1>
+            <p class="subtitle">蔬菜百科 · 营养查询 · 食物相克，一站搞定</p>
+            <div class="search-container">
+                <div class="search-box-wrapper">
+                    <div class="search-input-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-box" id="homeSearch" placeholder="搜索蔬菜名称，如：菠菜、番茄..." autocomplete="off">
+                        <div class="suggest-dropdown" id="suggestDropdown"></div>
+                    </div>
+                    <button class="search-btn" onclick="doSearch()">搜索</button>
+                </div>
+            </div>
+        </section>
+
+        <div class="home-features">
+            <div class="feature-card" onclick="switchPage('list')">
+                <div class="f-icon">📚</div>
+                <h3>蔬菜大全</h3>
+                <p>按分类浏览各种蔬菜，了解营养与食用价值</p>
+            </div>
+            <div class="feature-card danger" onclick="switchPage('check')">
+                <div class="f-icon">⚠️</div>
+                <h3>食物相克查询</h3>
+                <p>输入两种食材，一键查询能否同食</p>
+            </div>
+            <div class="feature-card" onclick="switchPage('list')">
+                <div class="f-icon">🔍</div>
+                <h3>智能搜索</h3>
+                <p>实时联想，快速找到你关心的蔬菜信息</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 蔬菜大全 ===== -->
+    <div class="page" id="page-list">
+        <div class="page-header">
+            <h2>蔬菜大全</h2>
+            <p>浏览各类蔬菜，点击卡片查看详细信息</p>
+        </div>
+        <div class="categories" id="categories"></div>
+        <div class="vegetable-grid" id="vegetableGrid"></div>
+    </div>
+
+    <!-- ===== 食物相克查询 ===== -->
+    <div class="page" id="page-check">
+        <div class="page-header">
+            <h2>食物相克对照表</h2>
+            <p>输入两种食材，查询是否可以一起食用</p>
+        </div>
+        <div class="check-page">
+            <div class="check-boxes">
+                <div class="check-input-wrap">
+                    <input type="text" id="foodA" placeholder="食材 A，如：菠菜" autocomplete="off">
+                </div>
+                <span class="check-plus">+</span>
+                <div class="check-input-wrap">
+                    <input type="text" id="foodB" placeholder="食材 B，如：豆腐" autocomplete="off">
+                </div>
+                <button class="check-btn" onclick="checkCompat()">查询</button>
+            </div>
+            <div class="check-result" id="checkResult"></div>
+        </div>
+
+        <div class="compat-summary">
+            <h3>📋 常见搭配相克汇总</h3>
+            <div class="compat-grid" id="compatGrid"></div>
+        </div>
+    </div>
+
+    <!-- ===== 关于本站 ===== -->
+    <div class="page" id="page-about">
+        <div class="about-page">
+            <h2>关于蔬知</h2>
+            <p>「蔬知」是一个专注于蔬菜知识科普的网站，致力于帮助用户了解各种蔬菜的营养价值、食用方法以及食物搭配禁忌。</p>
+            <ul class="feature-list">
+                <li>🥬 <span><strong>蔬菜检索：</strong>支持按名称搜索，实时联想，快速定位</span></li>
+                <li>📚 <span><strong>蔬菜分类：</strong>绿叶菜、瓜茄类、根茎类、菌菇类、豆类蔬菜</span></li>
+                <li>⚠️ <span><strong>食物相克查询：</strong>双食材查询，科学搭配饮食</span></li>
+                <li>📊 <span><strong>营养信息：</strong>每种蔬菜的营养成分、食用好处、烹饪建议</span></li>
+            </ul>
+            <p>本站数据仅供参考，不能替代专业医疗建议。如有特殊体质或健康问题，请咨询专业医生。</p>
+            <p style="color: var(--primary-dark); font-weight: 600;">🥬 蔬知 · 让健康饮食成为习惯</p>
+        </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent"></div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer>
+        <p>🥬 蔬知 · 蔬菜百科与食物相克查询</p>
+        <p>© 2026 蔬知 | 数据仅供参考，不能替代专业医疗建议</p>
+    </footer>
+
+    <script>
+        // ===== 蔬菜数据 =====
+        const vegetables = [
+            {
+                name: "番茄", category: "瓜茄类", emoji: "🍅",
+                gradient: "linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)",
+                image: "images/tomato.jpg",
+                alias: "西红柿、洋柿子", origin: "南美洲", season: "夏秋季",
+                desc: "番茄酸甜可口，是餐桌上的常客，可生食、烹饪或制作酱料。",
+                nutrition: ["维生素C", "番茄红素", "钾", "膳食纤维"],
+                benefits: ["抗氧化延缓衰老", "保护心血管", "美白肌肤", "促进消化"],
+                incompatible: [
+                    {food: "黄瓜", reason: "黄瓜含维C分解酶，会破坏番茄的维生素C"},
+                    {food: "螃蟹", reason: "两者同食易导致腹泻"},
+                    {food: "红薯", reason: "可能形成胃结石，引起腹痛"},
+                    {food: "白酒", reason: "同食可能引起胸闷气短"}
+                ],
+                compatible: ["鸡蛋（营养互补）", "牛肉（促进铁吸收）", "橄榄油（利于番茄红素吸收）"],
+                tips: "番茄红素是脂溶性物质，与油脂搭配食用吸收更好。",
+                cooking: "可生食、炒蛋、做汤、制酱，加热后番茄红素更易吸收。"
+            },
+            {
+                name: "黄瓜", category: "瓜茄类", emoji: "🥒",
+                gradient: "linear-gradient(135deg, #a8e6cf 0%, #56ab2f 100%)",
+                image: "images/cucumber.jpg",
+                alias: "胡瓜、青瓜", origin: "印度", season: "夏季",
+                desc: "黄瓜清脆爽口，水分充足，是凉拌和沙拉的理想选择。",
+                nutrition: ["维生素K", "维生素C", "钾", "水分"],
+                benefits: ["清热利水", "减肥瘦身", "美容护肤", "补充水分"],
+                incompatible: [
+                    {food: "花生", reason: "黄瓜性寒，花生油脂多，同食易引起腹泻"},
+                    {food: "辣椒", reason: "黄瓜中的分解酶会破坏辣椒的维生素C"},
+                    {food: "香菜", reason: "营养成分相互抵消"},
+                    {food: "芹菜", reason: "两者营养成分相抵，降低营养价值"}
+                ],
+                compatible: ["木耳（平衡营养）", "豆腐（清热润燥）", "蜂蜜（润肠通便）"],
+                tips: "黄瓜尾部含较多苦味素，有抗癌作用，不宜全部丢弃。",
+                cooking: "适合凉拌、生食，拍黄瓜、凉拌黄瓜是经典做法。"
+            },
+            {
+                name: "茄子", category: "瓜茄类", emoji: "🍆",
+                gradient: "linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)",
+                image: "images/eggplant.jpg",
+                alias: "矮瓜、吊菜子", origin: "印度", season: "夏秋季",
+                desc: "茄子肉质绵软，吸味能力强，适合红烧、烧烤等做法。",
+                nutrition: ["维生素P", "膳食纤维", "钾", "花青素"],
+                benefits: ["保护心血管", "降低胆固醇", "抗氧化", "清热活血"],
+                incompatible: [
+                    {food: "螃蟹", reason: "两者同食会损伤肠胃"},
+                    {food: "墨鱼", reason: "同食可能引起胃肠不适"},
+                    {food: "黑鱼", reason: "易引起腹泻"}
+                ],
+                compatible: ["猪肉（营养互补）", "大蒜（增香提味）", "青椒（色彩搭配）"],
+                tips: "茄子切开后易氧化变黑，可放入水中浸泡防止变色。",
+                cooking: "红烧、鱼香、烧烤、蒸拌均可，吸油能力强需注意油量。"
+            },
+            {
+                name: "辣椒", category: "瓜茄类", emoji: "🌶️",
+                gradient: "linear-gradient(135deg, #ff4757 0%, #ff6348 100%)",
+                image: "images/chili.jpg",
+                alias: "辣子、海椒", origin: "墨西哥", season: "夏秋季",
+                desc: "辣椒辛香开胃，是川菜、湘菜的灵魂食材。",
+                nutrition: ["维生素C", "辣椒素", "胡萝卜素", "铁"],
+                benefits: ["开胃消食", "发汗驱寒", "促进新陈代谢", "止痛"],
+                incompatible: [
+                    {food: "黄瓜", reason: "黄瓜中的分解酶破坏辣椒的维生素C"},
+                    {food: "动物肝脏", reason: "肝脏中的铜铁离子会氧化维生素C"},
+                    {food: "胡萝卜", reason: "胡萝卜中的分解酶破坏维生素C"},
+                    {food: "白酒", reason: "同食加重上火，损伤胃黏膜"}
+                ],
+                compatible: ["肉类（去腥增香）", "豆类（营养互补）", "醋（缓解辣味）"],
+                tips: "过量食用辣椒会刺激胃黏膜，胃病患者应适量。",
+                cooking: "可炒食、做酱料、腌制，干辣椒更耐储存。"
+            },
+            {
+                name: "白菜", category: "绿叶菜", emoji: "🥬",
+                gradient: "linear-gradient(135deg, #dfe6e9 0%, #a8e6cf 100%)",
+                image: "images/cabbage.jpg",
+                alias: "大白菜、菘菜", origin: "中国", season: "秋冬季",
+                desc: "白菜清甜可口，是北方冬季的当家蔬菜。",
+                nutrition: ["维生素C", "膳食纤维", "钙", "叶酸"],
+                benefits: ["润肠通便", "增强免疫力", "补钙", "护肤养颜"],
+                incompatible: [
+                    {food: "兔肉", reason: "同食可能引起腹泻呕吐"},
+                    {food: "羊肝", reason: "羊肝中的金属离子会破坏白菜的维生素C"},
+                    {food: "黄鳝", reason: "同食可能引起中毒"}
+                ],
+                compatible: ["豆腐（营养互补）", "猪肉（荤素搭配）", "木耳（清理肠道）"],
+                tips: "白菜经霜打后更甜，冬季食用最佳。",
+                cooking: "醋溜、炖、做馅、腌制辣白菜，做法多样。"
+            },
+            {
+                name: "菠菜", category: "绿叶菜", emoji: "🥬",
+                gradient: "linear-gradient(135deg, #00b894 0%, #55efc4 100%)",
+                image: "images/spinach.jpg",
+                alias: "波斯菜、赤根菜", origin: "伊朗", season: "冬春季",
+                desc: "菠菜富含铁元素，被誉为「营养模范生」。",
+                nutrition: ["铁", "叶酸", "维生素K", "钙"],
+                benefits: ["预防贫血", "促进生长发育", "保护视力", "促进肠道蠕动"],
+                incompatible: [
+                    {food: "豆腐", reason: "菠菜草酸与豆腐钙结合形成草酸钙结石"},
+                    {food: "黄瓜", reason: "黄瓜分解酶破坏菠菜的维生素C"},
+                    {food: "牛奶", reason: "草酸影响钙的吸收"},
+                    {food: "黄豆", reason: "影响钙和铁的吸收"}
+                ],
+                compatible: ["鸡蛋（营养互补）", "猪肝（补血效果好）", "芝麻（补钙）"],
+                tips: "菠菜草酸含量高，烹饪前先焯水可去除大部分草酸。",
+                cooking: "蒜蓉炒、做汤、凉拌、做馅，焯水后口感更好。"
+            },
+            {
+                name: "生菜", category: "绿叶菜", emoji: "🥗",
+                gradient: "linear-gradient(135deg, #7bed9f 0%, #2ed573 100%)",
+                image: "images/lettuce.jpg",
+                alias: "叶用莴苣、鹅仔菜", origin: "地中海沿岸", season: "全年",
+                desc: "生菜脆嫩清甜，是沙拉和汉堡的必备食材。",
+                nutrition: ["维生素A", "维生素C", "叶酸", "膳食纤维"],
+                benefits: ["清热安神", "清肝利胆", "减肥瘦身", "保护视力"],
+                incompatible: [
+                    {food: "蜂蜜", reason: "两者同食易引起腹泻"},
+                    {food: "鸭血", reason: "影响营养成分的吸收"}
+                ],
+                compatible: ["大蒜（杀菌提味）", "豆腐（清热润燥）", "三文鱼（营养互补）"],
+                tips: "生菜适宜生食，但食用前要彻底清洗干净。",
+                cooking: "适合生食做沙拉、夹汉堡，也可快炒。"
+            },
+            {
+                name: "芹菜", category: "绿叶菜", emoji: "🌿",
+                gradient: "linear-gradient(135deg, #b8e994 0%, #78e08f 100%)",
+                image: "images/celery.jpg",
+                alias: "香芹、旱芹", origin: "地中海沿岸", season: "秋冬季",
+                desc: "芹菜香脆爽口，富含膳食纤维，有助消化。",
+                nutrition: ["膳食纤维", "钾", "维生素K", "芹菜素"],
+                benefits: ["降血压", "促进消化", "利尿消肿", "镇静安神"],
+                incompatible: [
+                    {food: "兔肉", reason: "同食可能引起脱发"},
+                    {food: "鸡肉", reason: "同食会损伤元气"},
+                    {food: "甲鱼", reason: "同食易引起中毒"},
+                    {food: "黄瓜", reason: "营养成分相互抵消"}
+                ],
+                compatible: ["香干（营养互补）", "牛肉（补铁）", "花生（降血压）"],
+                tips: "芹菜叶的营养比茎更高，不应丢弃。",
+                cooking: "炒香干、做馅、榨汁、凉拌，芹菜叶可做汤。"
+            },
+            {
+                name: "胡萝卜", category: "根茎类", emoji: "🥕",
+                gradient: "linear-gradient(135deg, #ffa502 0%, #ff6348 100%)",
+                image: "images/carrot.jpg",
+                alias: "红萝卜、甘荀", origin: "阿富汗", season: "秋冬季",
+                desc: "胡萝卜富含胡萝卜素，对眼睛健康有益。",
+                nutrition: ["胡萝卜素", "维生素A", "膳食纤维", "钾"],
+                benefits: ["保护视力", "增强免疫力", "美容养颜", "促进生长"],
+                incompatible: [
+                    {food: "白萝卜", reason: "胡萝卜中的分解酶会破坏白萝卜的维生素C"},
+                    {food: "山楂", reason: "维生素C分解酶破坏山楂营养"},
+                    {food: "白酒", reason: "同食会损伤肝脏"},
+                    {food: "醋", reason: "醋会破坏胡萝卜素"}
+                ],
+                compatible: ["肉类（促进胡萝卜素吸收）", "菠菜（营养互补）", "蜂蜜（润肠）"],
+                tips: "胡萝卜素是脂溶性的，与油脂搭配食用吸收更好。",
+                cooking: "炒、炖、榨汁、做馅，熟吃比生吃更易吸收。"
+            },
+            {
+                name: "土豆", category: "根茎类", emoji: "🥔",
+                gradient: "linear-gradient(135deg, #d4a373 0%, #bc8a5f 100%)",
+                image: "images/potato.jpg",
+                alias: "马铃薯、洋芋", origin: "南美洲", season: "全年",
+                desc: "土豆软糯饱腹，是全球第四大粮食作物。",
+                nutrition: ["淀粉", "维生素C", "钾", "膳食纤维"],
+                benefits: ["补充能量", "养胃健脾", "降血压", "润肠通便"],
+                incompatible: [
+                    {food: "香蕉", reason: "同食容易在面部生色斑"},
+                    {food: "西红柿", reason: "同食会引起消化不良"},
+                    {food: "石榴", reason: "同食易引起中毒"},
+                    {food: "柿子", reason: "同食易形成胃结石"}
+                ],
+                compatible: ["牛肉（营养互补）", "青椒（补充维C）", "醋（分解淀粉）"],
+                tips: "发芽或皮变绿的土豆含龙葵素，不能食用。",
+                cooking: "炒丝、炖煮、薯条、土豆泥，做法多样。"
+            },
+            {
+                name: "萝卜", category: "根茎类", emoji: "🥕",
+                gradient: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
+                image: "images/radish.jpg",
+                alias: "白萝卜、莱菔", origin: "中国", season: "秋冬季",
+                desc: "白萝卜清脆多汁，有「小人参」的美誉。",
+                nutrition: ["维生素C", "消化酶", "膳食纤维", "芥子油"],
+                benefits: ["消食化滞", "化痰止咳", "清热生津", "增强免疫力"],
+                incompatible: [
+                    {food: "橘子", reason: "同食可能诱发甲状腺肿"},
+                    {food: "木耳", reason: "同食可能引发皮炎"},
+                    {food: "人参", reason: "萝卜的下气作用会抵消人参的补气功效"},
+                    {food: "柿子", reason: "同食易形成胃结石"}
+                ],
+                compatible: ["羊肉（温凉互补）", "排骨（提鲜）", "蜂蜜（润肺止咳）"],
+                tips: "俗话说「冬吃萝卜夏吃姜」，白萝卜是冬季养生佳品。",
+                cooking: "生食、炖汤、腌制、做馅，萝卜丝饼是经典小吃。"
+            },
+            {
+                name: "洋葱", category: "根茎类", emoji: "🧅",
+                gradient: "linear-gradient(135deg, #f1c40f 0%, #e67e22 100%)",
+                image: "images/onion.jpg",
+                alias: "球葱、圆葱", origin: "中亚", season: "春夏季",
+                desc: "洋葱辛香浓郁，是西餐和中餐的基础调味菜。",
+                nutrition: ["槲皮素", "维生素C", "硫化物", "膳食纤维"],
+                benefits: ["杀菌消炎", "降血压", "抗氧化", "预防感冒"],
+                incompatible: [
+                    {food: "蜂蜜", reason: "同食会损伤眼睛"},
+                    {food: "海带", reason: "同食易形成结石"},
+                    {food: "虾", reason: "同食形成草酸钙，影响钙吸收"}
+                ],
+                compatible: ["牛肉（去腥增香）", "鸡蛋（营养互补）", "番茄（风味搭配）"],
+                tips: "切洋葱时流泪是因为硫化物刺激眼睛，冷藏后切可缓解。",
+                cooking: "炒、炖、做配料、腌制，是许多菜肴的基础。"
+            },
+            {
+                name: "西兰花", category: "花菜类", emoji: "🥦",
+                gradient: "linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)",
+                image: "images/broccoli.jpg",
+                alias: "绿菜花、茎椰菜", origin: "意大利", season: "秋冬季",
+                desc: "西兰花营养全面，被誉为「蔬菜皇冠」。",
+                nutrition: ["维生素C", "维生素K", "叶酸", "萝卜硫素"],
+                benefits: ["抗癌防癌", "增强免疫力", "促进生长", "保护心血管"],
+                incompatible: [
+                    {food: "牛奶", reason: "影响钙的吸收利用"},
+                    {food: "西葫芦", reason: "西葫芦中的分解酶破坏西兰花的维生素C"},
+                    {food: "动物肝脏", reason: "影响矿物质的吸收"}
+                ],
+                compatible: ["大蒜（增强抗癌效果）", "番茄（营养互补）", "虾仁（补充蛋白质）"],
+                tips: "西兰花适合清蒸或快炒，避免过度烹饪导致营养流失。",
+                cooking: "清蒸、蒜蓉炒、焯水凉拌、做汤。"
+            },
+            {
+                name: "花菜", category: "花菜类", emoji: "🥦",
+                gradient: "linear-gradient(135deg, #fafafa 0%, #dfe4ea 100%)",
+                image: "images/cauliflower.jpg",
+                alias: "菜花、花椰菜", origin: "地中海沿岸", season: "秋冬季",
+                desc: "花菜口感细嫩，味道鲜美，老少皆宜。",
+                nutrition: ["维生素C", "维生素K", "膳食纤维", "钾"],
+                benefits: ["抗癌防癌", "增强免疫力", "促进消化", "减肥瘦身"],
+                incompatible: [
+                    {food: "牛奶", reason: "影响钙的吸收"},
+                    {food: "猪肝", reason: "猪肝中的铜铁离子破坏维生素C"},
+                    {food: "黄瓜", reason: "黄瓜分解酶破坏维生素C"}
+                ],
+                compatible: ["番茄（营养互补）", "猪肉（荤素搭配）", "胡萝卜（色彩营养）"],
+                tips: "花菜质地细嫩，容易消化，适合儿童和老人。",
+                cooking: "干锅、炒肉、焯水凉拌、做汤。"
+            },
+            {
+                name: "香菇", category: "菌菇类", emoji: "🍄",
+                gradient: "linear-gradient(135deg, #a0522d 0%, #cd853f 100%)",
+                image: "images/shiitake.jpg",
+                alias: "香蕈、冬菇", origin: "中国", season: "秋冬季",
+                desc: "香菇香气浓郁，是煲汤提鲜的好食材。",
+                nutrition: ["香菇多糖", "维生素D", "B族维生素", "硒"],
+                benefits: ["增强免疫力", "抗癌防癌", "降胆固醇", "补钙"],
+                incompatible: [
+                    {food: "鹌鹑蛋", reason: "同食可能在面部长黑斑"},
+                    {food: "驴肉", reason: "同食易引起腹痛腹泻"},
+                    {food: "鸽肉", reason: "同食易引起痔疮"}
+                ],
+                compatible: ["鸡肉（提鲜）", "豆腐（营养互补）", "油菜（荤素搭配）"],
+                tips: "干香菇的鲜味比鲜香菇更浓郁，泡发水可用于煲汤。",
+                cooking: "煲汤、炖菜、炒制、做馅，干香菇需提前泡发。"
+            },
+            {
+                name: "金针菇", category: "菌菇类", emoji: "🍄",
+                gradient: "linear-gradient(135deg, #fff5e6 0%, #ffe0b2 100%)",
+                image: "images/enoki.jpg",
+                alias: "毛柄金钱菌、朴菇", origin: "中国", season: "秋冬季",
+                desc: "金针菇爽滑脆嫩，是火锅和烧烤的常客。",
+                nutrition: ["赖氨酸", "锌", "膳食纤维", "多糖"],
+                benefits: ["促进智力发育", "增强免疫力", "降胆固醇", "预防肝病"],
+                incompatible: [
+                    {food: "牛奶", reason: "同食可能引起消化不良"},
+                    {food: "驴肉", reason: "同食可能引发心绞痛"},
+                    {food: "蚬", reason: "同食会破坏维生素B1"}
+                ],
+                compatible: ["豆腐（营养互补）", "鸡肉（提鲜）", "西兰花（营养搭配）"],
+                tips: "金针菇不易消化，应细嚼慢咽，肠胃弱者适量食用。",
+                cooking: "火锅、烧烤、凉拌、做汤，煮熟后食用更安全。"
+            },
+            {
+                name: "豆角", category: "豆类蔬菜", emoji: "🫛",
+                gradient: "linear-gradient(135deg, #55efc4 0%, #00b894 100%)",
+                image: "images/greenbean.jpg",
+                alias: "豇豆、长角豆", origin: "非洲", season: "夏秋季",
+                desc: "豆角鲜嫩可口，是夏季常见的豆类蔬菜。",
+                nutrition: ["蛋白质", "维生素C", "膳食纤维", "钾"],
+                benefits: ["健脾和胃", "补肾止泻", "促进消化", "增强免疫力"],
+                incompatible: [
+                    {food: "醋", reason: "醋会破坏豆角的胡萝卜素"},
+                    {food: "牛奶", reason: "影响蛋白质的吸收"}
+                ],
+                compatible: ["猪肉（营养互补）", "土豆（饱腹搭配）", "番茄（维生素互补）"],
+                tips: "豆角必须彻底煮熟，否则可能引起食物中毒。",
+                cooking: "炒肉、焖煮、凉拌（需煮熟）、做馅。"
+            },
+            {
+                name: "豌豆", category: "豆类蔬菜", emoji: "🫛",
+                gradient: "linear-gradient(135deg, #7bed9f 0%, #2ed573 100%)",
+                image: "images/pea.jpg",
+                alias: "青豆、荷兰豆", origin: "地中海沿岸", season: "春夏季",
+                desc: "豌豆清甜鲜嫩，富含蛋白质和膳食纤维。",
+                nutrition: ["蛋白质", "维生素C", "膳食纤维", "叶酸"],
+                benefits: ["增强免疫力", "促进消化", "补钙", "美容养颜"],
+                incompatible: [
+                    {food: "羊肉", reason: "同食易引起黄疸和脚气病"},
+                    {food: "醋", reason: "醋会破坏豌豆的营养成分"}
+                ],
+                compatible: ["胡萝卜（营养互补）", "玉米（膳食纤维搭配）", "肉末（蛋白质互补）"],
+                tips: "豌豆不宜过量食用，以免引起腹胀。",
+                cooking: "清炒、炖汤、做沙拉、煮粥。"
+            }
+        ];
+
+        // 蔬菜中文名到图片文件名映射
+        const imgMap = {
+            "番茄": "tomato", "黄瓜": "cucumber", "茄子": "eggplant", "辣椒": "chili",
+            "白菜": "cabbage", "菠菜": "spinach", "生菜": "lettuce", "芹菜": "celery",
+            "胡萝卜": "carrot", "土豆": "potato", "萝卜": "radish", "洋葱": "onion",
+            "西兰花": "broccoli", "花菜": "cauliflower", "香菇": "shiitake", "金针菇": "enoki",
+            "豆角": "greenbean", "豌豆": "pea"
+        };
+
+        // 所有可查询的食材（用于相克查询的联想）
+        const allFoods = [
+            ...vegetables.map(v => v.name),
+            "鸡蛋", "牛奶", "豆腐", "猪肉", "牛肉", "鸡肉", "羊肉", "鱼肉",
+            "虾", "螃蟹", "花生", "蜂蜜", "白酒", "香蕉", "橘子", "柿子",
+            "红薯", "山楂", "醋", "海带", "木耳", "大蒜", "香菜", "黄瓜",
+            "白萝卜", "动物肝脏", "猪肝", "羊肝", "墨鱼", "黑鱼", "兔肉",
+            "甲鱼", "黄豆", "鸭血", "鹌鹑蛋", "驴肉", "鸽肉", "蚬", "西葫芦"
+        ];
+
+        // 提取所有分类
+        const categories = ["全部", "绿叶菜", "瓜茄类", "根茎类", "菌菇类", "豆类蔬菜"];
+        let currentCategory = "全部";
+        let currentKeyword = "";
+
+        // ===== 页面切换 =====
+        function switchPage(page) {
+            document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+            document.getElementById("page-" + page).classList.add("active");
+            document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
+            document.querySelector(`.nav-link[data-page="${page}"]`).classList.add("active");
+            document.getElementById("suggestDropdown").classList.remove("active");
+            window.scrollTo(0, 0);
+        }
+
+        // ===== 渲染分类标签 =====
+        function renderCategories() {
+            const container = document.getElementById("categories");
+            container.innerHTML = categories.map(cat =>
+                `<button class="category-btn ${cat === currentCategory ? 'active' : ''}" data-cat="${cat}">${cat}</button>`
+            ).join("");
+            container.querySelectorAll(".category-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    currentCategory = btn.dataset.cat;
+                    renderCategories();
+                    renderVegetables();
+                });
+            });
+        }
+
+        // ===== 渲染蔬菜卡片 =====
+        function renderVegetables() {
+            const grid = document.getElementById("vegetableGrid");
+            let list = vegetables;
+            if (currentCategory !== "全部") {
+                list = list.filter(v => v.category === currentCategory);
+            }
+            if (currentKeyword) {
+                const kw = currentKeyword.toLowerCase();
+                list = list.filter(v =>
+                    v.name.toLowerCase().includes(kw) ||
+                    v.alias.toLowerCase().includes(kw) ||
+                    v.desc.toLowerCase().includes(kw)
+                );
+            }
+            if (list.length === 0) {
+                grid.innerHTML = `<div class="no-result">🥺 没有找到相关蔬菜，换个关键词试试吧~</div>`;
+                return;
+            }
+            grid.innerHTML = list.map((v) => `
+                <div class="card" onclick="showDetail('${v.name}')">
+                    <div class="card-img" style="background: ${v.gradient};">
+                        ${v.image ? `<img src="${v.image}" alt="${v.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span class="veg-emoji" style="display:none;">${v.emoji}</span>` : `<span class="veg-emoji">${v.emoji}</span>`}
+                    </div>
+                    <div class="card-body">
+                        <span class="card-category">${v.category}</span>
+                        <h3 class="card-title">${v.name}</h3>
+                        <p class="card-desc">${v.desc}</p>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // ===== 搜索联想 =====
+        const homeSearch = document.getElementById("homeSearch");
+        const suggestDropdown = document.getElementById("suggestDropdown");
+
+        homeSearch.addEventListener("input", (e) => {
+            const kw = e.target.value.trim().toLowerCase();
+            if (!kw) {
+                suggestDropdown.classList.remove("active");
+                return;
+            }
+            const matches = vegetables.filter(v =>
+                v.name.toLowerCase().includes(kw) ||
+                v.alias.toLowerCase().includes(kw)
+            ).slice(0, 6);
+
+            if (matches.length === 0) {
+                suggestDropdown.classList.remove("active");
+                return;
+            }
+
+            suggestDropdown.innerHTML = matches.map(v => `
+                <div class="suggest-item" data-name="${v.name}">
+                    <span class="s-emoji">${v.emoji}</span>
+                    <div class="s-text">
+                        <div class="s-name">${v.name}</div>
+                        <div class="s-desc">${v.alias}</div>
+                    </div>
+                    <span class="s-tag">${v.category}</span>
+                </div>
+            `).join("");
+            suggestDropdown.classList.add("active");
+        });
+
+        // 事件委托：点击联想项打开详情
+        suggestDropdown.addEventListener("mousedown", (e) => {
+            e.preventDefault(); // 防止输入框失焦
+        });
+        suggestDropdown.addEventListener("click", (e) => {
+            const item = e.target.closest(".suggest-item");
+            if (item) {
+                showDetail(item.dataset.name);
+                suggestDropdown.classList.remove("active");
+                homeSearch.value = "";
+            }
+        });
+
+        homeSearch.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                // 如果有联想结果，回车打开第一个；否则执行搜索
+                const first = suggestDropdown.querySelector(".suggest-item");
+                if (first && suggestDropdown.classList.contains("active")) {
+                    showDetail(first.dataset.name);
+                    suggestDropdown.classList.remove("active");
+                    homeSearch.value = "";
+                } else {
+                    doSearch();
+                }
+            }
+        });
+
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest(".search-container")) {
+                suggestDropdown.classList.remove("active");
+            }
+        });
+
+        function doSearch() {
+            const kw = homeSearch.value.trim();
+            if (!kw) return;
+            suggestDropdown.classList.remove("active");
+            switchPage("list");
+            currentKeyword = kw;
+            currentCategory = "全部";
+            renderCategories();
+            renderVegetables();
+        }
+
+        // ===== 蔬菜详情弹窗 =====
+        function showDetail(name) {
+            const v = vegetables.find(x => x.name === name);
+            if (!v) return;
+            const overlay = document.getElementById("modalOverlay");
+            const content = document.getElementById("modalContent");
+            content.innerHTML = `
+                <div class="modal-img" style="background: ${v.gradient};">
+                    ${v.image ? `<img src="${v.image}" alt="${v.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span class="veg-emoji" style="display:none;">${v.emoji}</span>` : `<span class="veg-emoji">${v.emoji}</span>`}
+                </div>
+                <div class="modal-body">
+                    <button class="modal-close" onclick="closeModal()">✕</button>
+                    <h2 class="modal-title">${v.emoji} ${v.name}</h2>
+                    <div class="modal-category">分类：${v.category}</div>
+                    <div class="modal-section">
+                        <h4>📋 基础信息</h4>
+                        <div class="info-grid">
+                            <div class="info-item"><div class="label">别名</div><div class="value">${v.alias}</div></div>
+                            <div class="info-item"><div class="label">产地</div><div class="value">${v.origin}</div></div>
+                            <div class="info-item"><div class="label">上市季节</div><div class="value">${v.season}</div></div>
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <h4>🌟 营养成分</h4>
+                        <div class="modal-tags">
+                            ${v.nutrition.map(n => `<span class="tag">${n}</span>`).join("")}
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <h4>💪 食用好处</h4>
+                        <div class="modal-tags">
+                            ${v.benefits.map(b => `<span class="tag">${b}</span>`).join("")}
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <h4>⚠️ 相克食材（不宜同食）</h4>
+                        <ul class="incompatible-list">
+                            ${v.incompatible.map(item => `<li><strong>${item.food}</strong>：${item.reason}</li>`).join("")}
+                        </ul>
+                    </div>
+                    <div class="modal-section">
+                        <h4>✅ 相宜食材</h4>
+                        <ul class="compatible-list">
+                            ${v.compatible.map(c => `<li>${c}</li>`).join("")}
+                        </ul>
+                    </div>
+                    <div class="modal-section">
+                        <h4>💡 食用小贴士</h4>
+                        <p style="font-size:0.9rem;color:var(--text-light);">${v.tips}</p>
+                    </div>
+                    <div class="modal-section">
+                        <h4>🍳 烹饪建议</h4>
+                        <p style="font-size:0.9rem;color:var(--text-light);">${v.cooking}</p>
+                    </div>
+                </div>
+            `;
+            overlay.classList.add("active");
+        }
+
+        function closeModal() {
+            document.getElementById("modalOverlay").classList.remove("active");
+        }
+
+        document.getElementById("modalOverlay").addEventListener("click", (e) => {
+            if (e.target.id === "modalOverlay") closeModal();
+        });
+
+        // ===== 食物相克查询 =====
+        function checkCompat() {
+            const a = document.getElementById("foodA").value.trim();
+            const b = document.getElementById("foodB").value.trim();
+            const result = document.getElementById("checkResult");
+
+            if (!a || !b) {
+                result.className = "check-result warning show";
+                result.innerHTML = `<div class="result-icon">⚠️</div><div class="result-title">请输入两种食材</div><p>请在两个输入框中分别填入食材名称</p>`;
+                return;
+            }
+
+            // 查找相克关系
+            let found = null;
+            vegetables.forEach(v => {
+                v.incompatible.forEach(item => {
+                    const vName = v.name;
+                    const iName = item.food.replace(/（.*?）/g, "").trim();
+                    if ((vName === a && iName === b) || (vName === b && iName === a)) {
+                        found = { type: "danger", food: vName, other: iName, reason: item.reason };
+                    }
+                });
+            });
+
+            if (found) {
+                result.className = "check-result danger show";
+                result.innerHTML = `
+                    <div class="result-icon">🚫</div>
+                    <div class="result-title">不宜同食</div>
+                    <p><strong>${a}</strong> 与 <strong>${b}</strong> 不宜同食</p>
+                    <p style="margin-top:0.5rem;color:#c0392b;">原因：${found.reason}</p>
+                `;
+            } else {
+                // 检查是否是相宜
+                let compatFound = null;
+                vegetables.forEach(v => {
+                    v.compatible.forEach(c => {
+                        const cName = c.replace(/（.*?）/g, "").trim();
+                        if ((v.name === a && cName === b) || (v.name === b && cName === a)) {
+                            compatFound = { food: v.name, other: cName, desc: c };
+                        }
+                    });
+                });
+
+                if (compatFound) {
+                    result.className = "check-result success show";
+                    result.innerHTML = `
+                        <div class="result-icon">✅</div>
+                        <div class="result-title">可以同食</div>
+                        <p><strong>${a}</strong> 与 <strong>${b}</strong> 可以搭配食用</p>
+                        <p style="margin-top:0.5rem;color:#1e8449;">${compatFound.desc}</p>
+                    `;
+                } else {
+                    result.className = "check-result warning show";
+                    result.innerHTML = `
+                        <div class="result-icon">🤔</div>
+                        <div class="result-title">暂无明确相克记录</div>
+                        <p><strong>${a}</strong> 与 <strong>${b}</strong> 未发现明确的相克关系</p>
+                        <p style="margin-top:0.5rem;color:#856404;">建议适量食用，如有特殊体质请咨询医生</p>
+                    `;
+                }
+            }
+        }
+
+        // ===== 渲染相克汇总列表 =====
+        function renderCompatSummary() {
+            const grid = document.getElementById("compatGrid");
+            const items = [];
+            vegetables.forEach(v => {
+                v.incompatible.forEach(item => {
+                    items.push({
+                        type: "danger",
+                        pair: `${v.name} + ${item.food}`,
+                        reason: item.reason
+                    });
+                });
+            });
+            // 取前18条展示
+            grid.innerHTML = items.slice(0, 18).map(item => `
+                <div class="compat-card ${item.type}">
+                    <div class="pair">${item.pair}</div>
+                    <div class="reason">${item.reason}</div>
+                </div>
+            `).join("");
+        }
+
+        // ===== 初始化 =====
+        renderCategories();
+        renderVegetables();
+        renderCompatSummary();
+    </script>
+
+</body>
+</html>
