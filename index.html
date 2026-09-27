@@ -74,6 +74,25 @@
         nav a:hover, nav a.active {
             background: rgba(255,255,255,0.2);
         }
+        .sound-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            font-size: 1.2rem;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .sound-btn:hover {
+            background: rgba(255,255,255,0.35);
+            transform: scale(1.1);
+        }
 
         /* ===== 页面容器 ===== */
         .page { display: none; }
@@ -691,6 +710,7 @@
                     <li><a class="nav-link" data-page="about" onclick="switchPage('about')">关于本站</a></li>
                 </ul>
             </nav>
+            <button id="soundToggle" class="sound-btn" onclick="toggleSound()" title="关闭所有声音" aria-label="声音开关">🔊</button>
         </div>
     </header>
 
@@ -1153,12 +1173,73 @@ let vegetables = []; // loaded from vegetables.json (async)
             `).join("");
         }
 
+        // ===== 音频控制 =====
+        // assets 下三个音频：bg（背景音乐，循环）、correct（答对）、wrong（答错）
+        const bgMusic = new Audio("assets/bg.wav");
+        bgMusic.loop = true;
+        bgMusic.volume = 0.4;
+        const correctSfx = new Audio("assets/correct.wav");
+        correctSfx.volume = 0.75;
+        const wrongSfx = new Audio("assets/wrong.wav");
+        wrongSfx.volume = 0.75;
+        let soundOn = true; // 全局声音开关：同时控制背景音乐与答题音效
+
+        function resumeBgMusic() {
+            if (!soundOn) return;
+            if (bgMusic.paused) { // 每次打开音乐前先判断是否已在播放，防止背景音乐重复播放
+                bgMusic.play().catch(() => {});
+            }
+        }
+        function playSfx(audio) {
+            if (!soundOn) return;
+            audio.pause();
+            audio.currentTime = 0; // 播放新音效前先停掉上一段，防止多个音效叠加
+            audio.play().catch(() => {});
+        }
+        function stopAllSfx() {
+            [correctSfx, wrongSfx].forEach(a => { a.pause(); a.currentTime = 0; });
+        }
+        function toggleSound() {
+            soundOn = !soundOn;
+            const btn = document.getElementById("soundToggle");
+            if (soundOn) {
+                btn.textContent = "🔊";
+                btn.title = "关闭所有声音";
+                resumeBgMusic();
+            } else {
+                btn.textContent = "🔇";
+                btn.title = "开启所有声音";
+                bgMusic.pause();
+                stopAllSfx();
+            }
+            try { localStorage.setItem("shuzhiSound", soundOn ? "1" : "0"); } catch (e) {}
+        }
+        (function initSound() {
+            try {
+                if (localStorage.getItem("shuzhiSound") === "0") {
+                    soundOn = false;
+                    const btn = document.getElementById("soundToggle");
+                    if (btn) { btn.textContent = "🔇"; btn.title = "开启所有声音"; }
+                }
+            } catch (e) {}
+            // 浏览器自动播放限制：先尝试直接循环播放，被拦截则在用户首次点击页面时开始
+            resumeBgMusic();
+            document.addEventListener("click", function firstPlay() {
+                resumeBgMusic();
+                document.removeEventListener("click", firstPlay);
+            }, { once: true });
+        })();
+
         // ===== 蔬菜猜谜问答 =====
         let quizScore = 0, quizTotal = 0, quizStreak = 0;
         let quizAnswer = null, quizLocked = false;
+        let usedQuestions = []; // 记录已出过的题目，避免游戏反复出现相同题目
 
         function makeQuestion() {
-            const answer = vegetables[Math.floor(Math.random() * vegetables.length)];
+            if (usedQuestions.length >= vegetables.length) usedQuestions = []; // 全部出过一轮后重新开始
+            const pool = vegetables.filter(v => usedQuestions.indexOf(v.name) < 0);
+            const answer = pool[Math.floor(Math.random() * pool.length)];
+            usedQuestions.push(answer.name);
             const options = [answer];
             while (options.length < 4 && options.length < vegetables.length) {
                 const c = vegetables[Math.floor(Math.random() * vegetables.length)];
@@ -1188,6 +1269,7 @@ let vegetables = []; // loaded from vegetables.json (async)
             quizTotal++;
             const right = name === quizAnswer.name;
             if (right) { quizScore += 10; quizStreak++; } else { quizStreak = 0; }
+            playSfx(right ? correctSfx : wrongSfx); // 立刻播放答对/答错提示音
 
             const btns = document.querySelectorAll("#quizOptions .quiz-option");
             btns.forEach(b => {
@@ -1210,9 +1292,13 @@ let vegetables = []; // loaded from vegetables.json (async)
             document.getElementById("quizNextBtn").style.display = "block";
         }
 
-        function nextQuestion() { makeQuestion(); }
+        function nextQuestion() {
+            stopAllSfx(); // 切换题目前停止上一段音频，防止音效叠加
+            makeQuestion();
+        }
 
         function resetQuiz() {
+            stopAllSfx();
             quizScore = 0; quizTotal = 0; quizStreak = 0;
             document.getElementById("quizScore").textContent = 0;
             document.getElementById("quizTotal").textContent = 0;
