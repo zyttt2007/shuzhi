@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蔬知 · 蔬菜百科与食物相克查询</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #2ecc71;
+            --primary-dark: #27ae60;
+            --primary-light: #eafaf1;
+            --accent: #f39c12;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #27ae60;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --bg: #f8faf8;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 20px rgba(46, 204, 113, 0.1);
+            --shadow-hover: 0 8px 30px rgba(46, 204, 113, 0.2);
+        }
+
+        body {
+            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* ===== 顶部导航 ===== */
+        header {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: #fff;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        .logo span { font-size: 1.8rem; }
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 0.5rem;
+        }
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        nav a:hover, nav a.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* ===== 页面容器 ===== */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* ===== Hero 搜索区 ===== */
+        .hero {
+            background: linear-gradient(135deg, #eafaf1 0%, #d5f5e3 100%);
+            padding: 4rem 2rem 3rem;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 2.8rem;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+        .hero .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+        .search-container {
+            max-width: 640px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .search-box-wrapper {
+            display: flex;
+            background: #fff;
+            border-radius: 50px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .search-input-wrap {
+            position: relative;
+            flex: 1;
+        }
+        .search-icon {
+            position: absolute;
+            left: 1.2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: var(--text-light);
+            pointer-events: none;
+        }
+        .search-box {
+            width: 100%;
+            padding: 1rem 1.5rem 1rem 3rem;
+            font-size: 1.05rem;
+            border: none;
+            outline: none;
+        }
+        .search-btn {
+            padding: 0 2rem;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .search-btn:hover { background: var(--primary-dark); }
+
+        /* 搜索联想下拉 */
+        .suggest-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            overflow: hidden;
+            display: none;
+            z-index: 50;
+        }
+        .suggest-dropdown.active { display: block; }
+        .suggest-item {
+            padding: 0.8rem 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+        .suggest-item:last-child { border-bottom: none; }
+        .suggest-item:hover { background: var(--primary-light); }
+        .suggest-item .s-emoji { font-size: 1.3rem; }
+        .suggest-item .s-text { flex: 1; }
+        .suggest-item .s-name { font-weight: 600; }
+        .suggest-item .s-desc { font-size: 0.8rem; color: var(--text-light); }
+        .suggest-item .s-tag {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        /* 首页功能入口 */
+        .home-features {
+            max-width: 1200px;
+            margin: 2.5rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+        .feature-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.3s;
+            border-top: 4px solid var(--primary);
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+        .feature-card .f-icon { font-size: 3rem; margin-bottom: 0.8rem; }
+        .feature-card h3 { margin-bottom: 0.5rem; color: var(--primary-dark); }
+        .feature-card p { font-size: 0.9rem; color: var(--text-light); }
+        .feature-card.danger { border-top-color: var(--danger); }
+        .feature-card.danger h3 { color: var(--danger); }
+
+        /* ===== 分类筛选 ===== */
+        .page-header {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 2rem 0;
+        }
+        .page-header h2 {
+            font-size: 1.8rem;
+            color: var(--primary-dark);
+            margin-bottom: 0.3rem;
+        }
+        .page-header p { color: var(--text-light); }
+        .categories {
+            max-width: 1200px;
+            margin: 1.5rem auto 0;
+            padding: 0 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+        .category-btn {
+            padding: 0.6rem 1.5rem;
+            border: 2px solid var(--primary);
+            background: #fff;
+            color: var(--primary-dark);
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .category-btn:hover { background: var(--primary-light); }
+        .category-btn.active { background: var(--primary); color: #fff; }
+
+        /* 蔬菜卡片网格 */
+        .vegetable-grid {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.8rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-hover);
+        }
+        .card-img {
+            width: 100%;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .card-img::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .card-img .veg-emoji {
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+            transition: transform 0.3s ease;
+        }
+        .card:hover .card-img .veg-emoji { transform: scale(1.15) rotate(-5deg); }
+        .card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+        .card:hover .card-img img { transform: scale(1.08); }
+        .card-title { transition: color 0.3s ease; }
+        .card:hover .card-title { color: var(--primary-dark); }
+        .card:hover .card-category { background: var(--primary); color: #fff; }
+        .card-category { transition: all 0.3s ease; }
+        /* 趣味冷知识区块 */
+        .funfact-box {
+            display: flex;
+            gap: 0.8rem;
+            align-items: flex-start;
+            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+            border: 1px dashed #f0a500;
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            margin-top: 1.2rem;
+        }
+        .funfact-icon { font-size: 1.5rem; line-height: 1; }
+        .funfact-title { font-weight: 700; color: #b26a00; margin-bottom: 0.25rem; font-size: 0.95rem; }
+        .funfact-box p { font-size: 0.88rem; color: #7a5200; line-height: 1.6; margin: 0; }
+        /* 趣味问答 */
+        .quiz-wrap { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 2rem; }
+        .quiz-scorebar {
+            display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;
+            background: var(--card-bg); border-radius: 14px; box-shadow: var(--shadow);
+            padding: 0.9rem 1.3rem; margin-bottom: 1.4rem; font-size: 0.95rem;
+        }
+        .quiz-scorebar strong { color: var(--primary-dark); font-size: 1.05rem; }
+        .quiz-reset-btn {
+            margin-left: auto; border: none; background: var(--primary-light);
+            color: var(--primary-dark); padding: 0.4rem 0.9rem; border-radius: 50px;
+            cursor: pointer; font-weight: 600; transition: all 0.25s;
+        }
+        .quiz-reset-btn:hover { background: var(--primary); color: #fff; }
+        .quiz-card { background: var(--card-bg); border-radius: 16px; box-shadow: var(--shadow); padding: 1.6rem; }
+        .quiz-question { font-size: 1.05rem; line-height: 1.9; white-space: pre-line; margin-bottom: 1.2rem; }
+        .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+        .quiz-option {
+            padding: 0.8rem 1rem; border: 2px solid var(--primary-light); background: #fff;
+            border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.25s;
+        }
+        .quiz-option:hover:not(:disabled) { border-color: var(--primary); background: var(--primary-light); transform: translateY(-2px); }
+        .quiz-option:disabled { cursor: default; }
+        .quiz-option.correct { border-color: #27ae60; background: #eafaf1; color: #1e8449; }
+        .quiz-option.wrong { border-color: #e74c3c; background: #fdedec; color: #c0392b; }
+        .quiz-feedback { margin-top: 1.1rem; font-size: 0.95rem; line-height: 1.7; display: none; }
+        .quiz-feedback.show { display: block; }
+        .quiz-next-btn {
+            display: block; margin: 1.1rem auto 0; border: none; background: var(--primary);
+            color: #fff; font-size: 1rem; font-weight: 600; padding: 0.6rem 1.8rem;
+            border-radius: 50px; cursor: pointer; transition: all 0.25s;
+        }
+        .quiz-next-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+        @media (max-width: 600px) { .quiz-options { grid-template-columns: 1fr; } }
+        /* 记忆翻牌 */
+        .mem-wrap { max-width: 760px; margin: 0 auto; padding: 0 1.5rem 2rem; }
+        .mem-toolbar {
+            display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+            background: var(--card-bg); border-radius: 14px; box-shadow: var(--shadow);
+            padding: 0.9rem 1.3rem; margin-bottom: 1.4rem; font-size: 0.95rem;
+        }
+        .mem-toolbar strong { color: var(--primary-dark); }
+        .mem-diff { display: flex; gap: 0.4rem; align-items: center; margin-left: auto; }
+        .mem-diff-btn {
+            border: 2px solid var(--primary-light); background: #fff; color: var(--primary-dark);
+            padding: 0.3rem 0.7rem; border-radius: 50px; cursor: pointer; font-size: 0.85rem;
+            font-weight: 600; transition: all 0.25s;
+        }
+        .mem-diff-btn:hover { background: var(--primary-light); }
+        .mem-diff-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .mem-restart-btn {
+            border: none; background: var(--primary); color: #fff; padding: 0.4rem 0.9rem;
+            border-radius: 50px; cursor: pointer; font-weight: 600; transition: all 0.25s;
+        }
+        .mem-restart-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+        .mem-grid { display: grid; gap: 0.8rem; }
+        .mem-cell { aspect-ratio: 3 / 4; perspective: 600px; cursor: pointer; }
+        .mem-inner {
+            position: relative; width: 100%; height: 100%;
+            transform-style: preserve-3d; transition: transform 0.45s;
+        }
+        .mem-cell.flipped .mem-inner, .mem-cell.matched .mem-inner { transform: rotateY(180deg); }
+        .mem-face {
+            position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            overflow: hidden; box-shadow: var(--shadow);
+        }
+        .mem-back {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            font-size: 2.4rem;
+        }
+        .mem-back::after {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35) 0%, transparent 60%);
+        }
+        .mem-front { transform: rotateY(180deg); background: #fff; }
+        .mem-front img { width: 100%; height: 100%; object-fit: cover; }
+        .mem-cell.matched { cursor: default; animation: memPop 0.4s ease; }
+        .mem-cell.matched .mem-front { box-shadow: var(--shadow), 0 0 0 3px #27ae60 inset; }
+        @keyframes memPop { 0% { transform: scale(1); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
+        .mem-result { text-align: center; margin-top: 1.2rem; font-size: 1.05rem; color: var(--primary-dark); font-weight: 600; }
+        @media (max-width: 600px) {
+            .mem-diff { margin-left: 0; width: 100%; }
+            .mem-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+        .card-body { padding: 1.1rem; }
+        .card-category {
+            display: inline-block;
+            font-size: 0.72rem;
+            padding: 0.15rem 0.6rem;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border-radius: 10px;
+            margin-bottom: 0.4rem;
+        }
+        .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .card-desc {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .no-result {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        /* ===== 详情弹窗 ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #fff;
+            border-radius: 20px;
+            max-width: 720px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-img {
+            width: 100%;
+            height: 260px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 7rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .modal-img::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .modal-img img { width: 100%; height: 100%; object-fit: cover; }
+        .modal-body { padding: 1.8rem; position: relative; }
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        .modal-title { font-size: 1.7rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .modal-category { color: var(--primary-dark); font-weight: 600; margin-bottom: 1rem; font-size: 0.9rem; }
+        .modal-section { margin-top: 1.2rem; }
+        .modal-section h4 {
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.6rem;
+        }
+        .info-item {
+            background: #f8f9fa;
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+        .info-item .label { color: var(--text-light); font-size: 0.75rem; }
+        .info-item .value { font-weight: 600; margin-top: 0.15rem; }
+        .modal-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .tag {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        /* 相克/相宜 */
+        .incompatible-list, .compatible-list {
+            list-style: none;
+            padding: 0;
+        }
+        .incompatible-list li {
+            padding: 0.5rem 0.8rem;
+            margin-bottom: 0.4rem;
+            background: #fff0f0;
+            border-left: 3px solid var(--danger);
+            border-radius: 6px;
+            font-size: 0.88rem;
+            color: #c0392b;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        .compatible-list li {
+            padding: 0.5rem 0.8rem;
+            margin-bottom: 0.4rem;
+            background: #eafaf1;
+            border-left: 3px solid var(--success);
+            border-radius: 6px;
+            font-size: 0.88rem;
+            color: #1e8449;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        .notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.78rem;
+            color: #856404;
+            margin-top: 0.6rem;
+        }
+
+        /* ===== 相克查询页 ===== */
+        .check-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .check-boxes {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+        .check-input-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+            max-width: 320px;
+        }
+        .check-input-wrap input {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            font-size: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .check-input-wrap input:focus { border-color: var(--primary); }
+        .check-plus { font-size: 1.8rem; color: var(--text-light); }
+        .check-btn {
+            padding: 0.9rem 2rem;
+            background: var(--danger);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .check-btn:hover { background: #c0392b; }
+        .check-result {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 16px;
+            text-align: center;
+            display: none;
+        }
+        .check-result.show { display: block; }
+        .check-result.danger { background: #fff0f0; border: 2px solid var(--danger); }
+        .check-result.warning { background: #fff8e1; border: 2px solid var(--warning); }
+        .check-result.success { background: #eafaf1; border: 2px solid var(--success); }
+        .check-result .result-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+        .check-result .result-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .check-result.danger .result-title { color: var(--danger); }
+        .check-result.warning .result-title { color: var(--warning); }
+        .check-result.success .result-title { color: var(--success); }
+
+        .compat-summary {
+            max-width: 1200px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+        .compat-summary h3 {
+            color: var(--primary-dark);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        .compat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.2rem;
+        }
+        .compat-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+            box-shadow: var(--shadow);
+        }
+        .compat-card .pair {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+        }
+        .compat-card .reason { font-size: 0.82rem; color: var(--text-light); }
+        .compat-card.danger { border-left: 4px solid var(--danger); }
+        .compat-card.warning { border-left: 4px solid var(--warning); }
+        .compat-card.success { border-left: 4px solid var(--success); }
+
+        /* ===== 关于页 ===== */
+        .about-page {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+        .about-page h2 { color: var(--primary-dark); margin-bottom: 1rem; }
+        .about-page p { margin-bottom: 1rem; color: var(--text-light); line-height: 1.8; }
+        .about-page .feature-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+        .about-page .feature-list li {
+            padding: 0.6rem 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* ===== 页脚 ===== */
+        footer {
+            background: #2c3e50;
+            color: #bdc3c7;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+        footer p { margin: 0.3rem 0; font-size: 0.85rem; }
+
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 2rem; }
+            nav ul { gap: 0.2rem; }
+            nav a { padding: 0.4rem 0.6rem; font-size: 0.85rem; }
+            .check-boxes { flex-direction: column; }
+            .check-plus { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 顶部导航 -->
+    <header>
+        <div class="nav-container">
+            <div class="logo" onclick="switchPage('home')"><span>🥬</span> 蔬知</div>
+            <nav>
+                <ul>
+                    <li><a class="nav-link active" data-page="home" onclick="switchPage('home')">首页</a></li>
+                    <li><a class="nav-link" data-page="list" onclick="switchPage('list')">蔬菜大全</a></li>
+                    <li><a class="nav-link" data-page="check" onclick="switchPage('check')">食物相克对照表</a></li>
+                    <li><a class="nav-link" data-page="quiz" onclick="switchPage('quiz')">趣味问答</a></li>
+                    <li><a class="nav-link" data-page="memory" onclick="switchPage('memory')">记忆翻牌</a></li>
+                    <li><a class="nav-link" data-page="about" onclick="switchPage('about')">关于本站</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ===== 首页 ===== -->
+    <div class="page active" id="page-home">
+        <section class="hero">
+            <h1>🥬 蔬知</h1>
+            <p class="subtitle">蔬菜百科 · 营养查询 · 食物相克，一站搞定</p>
+            <div class="search-container">
+                <div class="search-box-wrapper">
+                    <div class="search-input-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-box" id="homeSearch" placeholder="搜索蔬菜名称，如：菠菜、番茄..." autocomplete="off">
+                        <div class="suggest-dropdown" id="suggestDropdown"></div>
+                    </div>
+                    <button class="search-btn" onclick="doSearch()">搜索</button>
+                </div>
+            </div>
+        </section>
+
+        <div class="home-features">
+            <div class="feature-card" onclick="switchPage('list')">
+                <div class="f-icon">📚</div>
+                <h3>蔬菜大全</h3>
+                <p>按分类浏览各种蔬菜，了解营养与食用价值</p>
+            </div>
+            <div class="feature-card danger" onclick="switchPage('check')">
+                <div class="f-icon">⚠️</div>
+                <h3>食物相克查询</h3>
+                <p>输入两种食材，一键查询能否同食</p>
+            </div>
+            <div class="feature-card" onclick="switchPage('list')">
+                <div class="f-icon">🔍</div>
+                <h3>智能搜索</h3>
+                <p>实时联想，快速找到你关心的蔬菜信息</p>
+            </div>
+            <div class="feature-card" onclick="switchPage('quiz')">
+                <div class="f-icon">🎯</div>
+                <h3>趣味问答</h3>
+                <p>猜谜小游戏，看看你有多懂蔬菜</p>
+            </div>
+            <div class="feature-card" onclick="switchPage('memory')">
+                <div class="f-icon">🃏</div>
+                <h3>记忆翻牌</h3>
+                <p>翻牌配对小游戏，锻炼你的记忆力</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 蔬菜大全 ===== -->
+    <div class="page" id="page-list">
+        <div class="page-header">
+            <h2>蔬菜大全</h2>
+            <p>浏览各类蔬菜，点击卡片查看详细信息</p>
+        </div>
+        <div class="categories" id="categories"></div>
+        <div class="vegetable-grid" id="vegetableGrid"></div>
+    </div>
+
+    <!-- ===== 食物相克查询 ===== -->
+    <div class="page" id="page-check">
+        <div class="page-header">
+            <h2>食物相克对照表</h2>
+            <p>输入两种食材，查询是否可以一起食用</p>
+        </div>
+        <div class="check-page">
+            <div class="check-boxes">
+                <div class="check-input-wrap">
+                    <input type="text" id="foodA" placeholder="食材 A，如：菠菜" autocomplete="off">
+                </div>
+                <span class="check-plus">+</span>
+                <div class="check-input-wrap">
+                    <input type="text" id="foodB" placeholder="食材 B，如：豆腐" autocomplete="off">
+                </div>
+                <button class="check-btn" onclick="checkCompat()">查询</button>
+            </div>
+            <div class="check-result" id="checkResult"></div>
+        </div>
+
+        <div class="compat-summary">
+            <h3>📋 常见搭配相克汇总</h3>
+            <div class="compat-grid" id="compatGrid"></div>
+        </div>
+    </div>
+
+    <!-- ===== 趣味问答 ===== -->
+    <div class="page" id="page-quiz">
+        <div class="page-header">
+            <h2>蔬菜猜谜问答</h2>
+            <p>根据特征描述，猜猜是哪种蔬菜，答对 +10 分</p>
+        </div>
+        <div class="quiz-wrap">
+            <div class="quiz-scorebar">
+                <span>⭐ 得分：<strong id="quizScore">0</strong></span>
+                <span>📝 已答：<strong id="quizTotal">0</strong></span>
+                <span>🔥 连对：<strong id="quizStreak">0</strong></span>
+                <button class="quiz-reset-btn" onclick="resetQuiz()">🔄 重置</button>
+            </div>
+            <div class="quiz-card">
+                <div class="quiz-question" id="quizQuestion">加载中...</div>
+                <div class="quiz-options" id="quizOptions"></div>
+                <div class="quiz-feedback" id="quizFeedback"></div>
+                <button class="quiz-next-btn" id="quizNextBtn" onclick="nextQuestion()" style="display:none;">下一题 ➜</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 记忆翻牌 ===== -->
+    <div class="page" id="page-memory">
+        <div class="page-header">
+            <h2>蔬菜记忆翻牌</h2>
+            <p>翻开两张相同蔬菜的卡牌即可配对，全部配对即通关</p>
+        </div>
+        <div class="mem-wrap">
+            <div class="mem-toolbar">
+                <span>⏱️ <strong id="memTime">0</strong> 秒</span>
+                <span>👣 步数：<strong id="memSteps">0</strong></span>
+                <span>🧩 配对：<strong id="memPairs">0</strong>/<span id="memTarget">8</span></span>
+                <div class="mem-diff">
+                    <button class="mem-diff-btn" data-pairs="6" onclick="startMemory(6)">易 · 6对</button>
+                    <button class="mem-diff-btn active" data-pairs="8" onclick="startMemory(8)">中 · 8对</button>
+                    <button class="mem-diff-btn" data-pairs="12" onclick="startMemory(12)">难 · 12对</button>
+                </div>
+                <button class="mem-restart-btn" onclick="startMemory()">🔄 重新开始</button>
+            </div>
+            <div class="mem-grid" id="memGrid"></div>
+            <div class="mem-result" id="memResult"></div>
+        </div>
+    </div>
+
+    <!-- ===== 关于本站 ===== -->
+    <div class="page" id="page-about">
+        <div class="about-page">
+            <h2>关于蔬知</h2>
+            <p>「蔬知」是一个专注于蔬菜知识科普的网站，致力于帮助用户了解各种蔬菜的营养价值、食用方法以及食物搭配禁忌。</p>
+            <ul class="feature-list">
+                <li>🥬 <span><strong>蔬菜检索：</strong>支持按名称搜索，实时联想，快速定位</span></li>
+                <li>📚 <span><strong>蔬菜分类：</strong>绿叶菜、瓜茄类、根茎类、菌菇类、豆类蔬菜</span></li>
+                <li>⚠️ <span><strong>食物相克查询：</strong>双食材查询，科学搭配饮食</span></li>
+                <li>📊 <span><strong>营养信息：</strong>每种蔬菜的营养成分、食用好处、烹饪建议</span></li>
+            </ul>
+            <p>本站数据仅供参考，不能替代专业医疗建议。如有特殊体质或健康问题，请咨询专业医生。</p>
+            <p style="color: var(--primary-dark); font-weight: 600;">🥬 蔬知 · 让健康饮食成为习惯</p>
+        </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent"></div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer>
+        <p>🥬 蔬知 · 蔬菜百科与食物相克查询</p>
+        <p>© 2026 蔬知 | 数据仅供参考，不能替代专业医疗建议</p>
+    </footer>
+
+    <script>
+        // ===== 蔬菜数据 =====
+let vegetables = []; // loaded from vegetables.json (async)
+
+        const categories = ["全部", "绿叶菜", "瓜茄类", "根茎类", "花菜类", "菌菇类", "豆类蔬菜"];
+        let currentCategory = "全部";
+        let currentKeyword = "";
+
+        // ===== 页面切换 =====
+        function switchPage(page) {
+            document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+            document.getElementById("page-" + page).classList.add("active");
+            document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
+            document.querySelector(`.nav-link[data-page="${page}"]`).classList.add("active");
+            document.getElementById("suggestDropdown").classList.remove("active");
+            window.scrollTo(0, 0);
+        }
+
+        // ===== 渲染分类标签 =====
+        function renderCategories() {
+            const container = document.getElementById("categories");
+            container.innerHTML = categories.map(cat =>
+                `<button class="category-btn ${cat === currentCategory ? 'active' : ''}" data-cat="${cat}">${cat}</button>`
+            ).join("");
+            container.querySelectorAll(".category-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    currentCategory = btn.dataset.cat;
+                    renderCategories();
+                    renderVegetables();
+                });
+            });
+        }
+
+        // ===== 渲染蔬菜卡片 =====
+        function renderVegetables() {
+            const grid = document.getElementById("vegetableGrid");
+            grid.innerHTML = ""; // 先清空再渲染，避免重复点击筛选时卡片堆叠
+            let list = vegetables;
+            if (currentCategory !== "全部") {
+                list = list.filter(v => v.category === currentCategory);
+            }
+            if (currentKeyword) {
+                const kw = currentKeyword.toLowerCase();
+                list = list.filter(v =>
+                    v.name.toLowerCase().includes(kw) ||
+                    v.alias.toLowerCase().includes(kw) ||
+                    v.desc.toLowerCase().includes(kw)
+                );
+            }
+            if (list.length === 0) {
+                grid.innerHTML = `<div class="no-result">🥺 没有找到相关蔬菜，换个关键词试试吧~</div>`;
+                return;
+            }
+            grid.innerHTML = list.map((v) => `
+                <div class="card" onclick="showDetail('${v.name}')">
+                    <div class="card-img" style="background: ${v.gradient};">
+                        ${v.image ? `<img src="${v.image}" alt="${v.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span class="veg-emoji" style="display:none;">${v.emoji}</span>` : `<span class="veg-emoji">${v.emoji}</span>`}
+                    </div>
+                    <div class="card-body">
+                        <span class="card-category">${v.category}</span>
+                        <h3 class="card-title">${v.name}</h3>
+                        <p class="card-desc">${v.desc}</p>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // ===== 搜索联想 =====
+        const homeSearch = document.getElementById("homeSearch");
+        const suggestDropdown = document.getElementById("suggestDropdown");
+
+        homeSearch.addEventListener("input", (e) => {
+            const kw = e.target.value.trim().toLowerCase();
+            if (!kw) {
+                suggestDropdown.classList.remove("active");
+                return;
+            }
+            const matches = vegetables.filter(v =>
+                v.name.toLowerCase().includes(kw) ||
+                v.alias.toLowerCase().includes(kw)
+            ).slice(0, 6);
+
+            if (matches.length === 0) {
+                suggestDropdown.classList.remove("active");
+                return;
+            }
+
+            suggestDropdown.innerHTML = matches.map(v => `
+                <div class="suggest-item" data-name="${v.name}">
+                    <span class="s-emoji">${v.emoji}</span>
+                    <div class="s-text">
+                        <div class="s-name">${v.name}</div>
+                        <div class="s-desc">${v.alias}</div>
+                    </div>
+                    <span class="s-tag">${v.category}</span>
+                </div>
+            `).join("");
+            suggestDropdown.classList.add("active");
+        });
+
+        // 事件委托：点击联想项打开详情
+        suggestDropdown.addEventListener("mousedown", (e) => {
+            e.preventDefault(); // 防止输入框失焦
+        });
+        suggestDropdown.addEventListener("click", (e) => {
+            const item = e.target.closest(".suggest-item");
+            if (item) {
+                showDetail(item.dataset.name);
+                suggestDropdown.classList.remove("active");
+                homeSearch.value = "";
+            }
+        });
+
+        homeSearch.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                // 如果有联想结果，回车打开第一个；否则执行搜索
+                const first = suggestDropdown.querySelector(".suggest-item");
+                if (first && suggestDropdown.classList.contains("active")) {
+                    showDetail(first.dataset.name);
+                    suggestDropdown.classList.remove("active");
+                    homeSearch.value = "";
+                } else {
+                    doSearch();
+                }
+            }
+        });
+
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest(".search-container")) {
+                suggestDropdown.classList.remove("active");
+            }
+        });
+
+        function doSearch() {
+            const kw = homeSearch.value.trim();
+            if (!kw) return;
+            suggestDropdown.classList.remove("active");
+            switchPage("list");
+            currentKeyword = kw;
+            currentCategory = "全部";
+            renderCategories();
+            renderVegetables();
+        }
+
+        // ===== 蔬菜详情弹窗 =====
+        function showDetail(name) {
+            const v = vegetables.find(x => x.name === name);
+            if (!v) return;
+            const overlay = document.getElementById("modalOverlay");
+            const content = document.getElementById("modalContent");
+            content.innerHTML = `
+                <div class="modal-img" style="background: ${v.gradient};">
+                    ${v.image ? `<img src="${v.image}" alt="${v.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span class="veg-emoji" style="display:none;">${v.emoji}</span>` : `<span class="veg-emoji">${v.emoji}</span>`}
+                </div>
+                <div class="modal-body">
+                    <button class="modal-close" onclick="closeModal()">✕</button>
+                    <h2 class="modal-title">${v.emoji} ${v.name}</h2>
+                    <div class="modal-category">分类：${v.category}</div>
+                    <div class="funfact-box">
+                        <span class="funfact-icon">🎲</span>
+                        <div>
+                            <div class="funfact-title">趣味冷知识</div>
+                            <p>${v.funFact}</p>
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <h4>📋 基础信息</h4>
+                        <div class="info-grid">
+                            <div class="info-item"><div class="label">别名</div><div class="value">${v.alias}</div></div>
+                            <div class="info-item"><div class="label">产地</div><div class="value">${v.origin}</div></div>
+                            <div class="info-item"><div class="label">上市季节</div><div class="value">${v.season}</div></div>
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <h4>🌟 营养成分</h4>
+                        <div class="modal-tags">
+                            ${v.nutrition.map(n => `<span class="tag">${n}</span>`).join("")}
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <h4>💪 食用好处</h4>
+                        <div class="modal-tags">
+                            ${v.benefits.map(b => `<span class="tag">${b}</span>`).join("")}
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <h4>⚠️ 相克食材（不宜同食）</h4>
+                        <ul class="incompatible-list">
+                            ${v.incompatible.map(item => `<li><strong>${item.food}</strong>：${item.reason}</li>`).join("")}
+                        </ul>
+                    </div>
+                    <div class="modal-section">
+                        <h4>✅ 相宜食材</h4>
+                        <ul class="compatible-list">
+                            ${v.compatible.map(c => `<li>${c}</li>`).join("")}
+                        </ul>
+                    </div>
+                    <div class="modal-section">
+                        <h4>💡 食用小贴士</h4>
+                        <p style="font-size:0.9rem;color:var(--text-light);">${v.tips}</p>
+                    </div>
+                    <div class="modal-section">
+                        <h4>🍳 烹饪建议</h4>
+                        <p style="font-size:0.9rem;color:var(--text-light);">${v.cooking}</p>
+                    </div>
+                </div>
+            `;
+            overlay.classList.add("active");
+        }
+
+        function closeModal() {
+            document.getElementById("modalOverlay").classList.remove("active");
+        }
+
+        document.getElementById("modalOverlay").addEventListener("click", (e) => {
+            if (e.target.id === "modalOverlay") closeModal();
+        });
+
+        // ===== 食物相克查询 =====
+        function checkCompat() {
+            const a = document.getElementById("foodA").value.trim();
+            const b = document.getElementById("foodB").value.trim();
+            const result = document.getElementById("checkResult");
+
+            if (!a || !b) {
+                result.className = "check-result warning show";
+                result.innerHTML = `<div class="result-icon">⚠️</div><div class="result-title">请输入两种食材</div><p>请在两个输入框中分别填入食材名称</p>`;
+                return;
+            }
+
+            // 查找相克关系
+            let found = null;
+            vegetables.forEach(v => {
+                v.incompatible.forEach(item => {
+                    const vName = v.name;
+                    const iName = item.food.replace(/（.*?）/g, "").trim();
+                    if ((vName === a && iName === b) || (vName === b && iName === a)) {
+                        found = { type: "danger", food: vName, other: iName, reason: item.reason };
+                    }
+                });
+            });
+
+            if (found) {
+                result.className = "check-result danger show";
+                result.innerHTML = `
+                    <div class="result-icon">🚫</div>
+                    <div class="result-title">不宜同食</div>
+                    <p><strong>${a}</strong> 与 <strong>${b}</strong> 不宜同食</p>
+                    <p style="margin-top:0.5rem;color:#c0392b;">原因：${found.reason}</p>
+                `;
+            } else {
+                // 检查是否是相宜
+                let compatFound = null;
+                vegetables.forEach(v => {
+                    v.compatible.forEach(c => {
+                        const cName = c.replace(/（.*?）/g, "").trim();
+                        if ((v.name === a && cName === b) || (v.name === b && cName === a)) {
+                            compatFound = { food: v.name, other: cName, desc: c };
+                        }
+                    });
+                });
+
+                if (compatFound) {
+                    result.className = "check-result success show";
+                    result.innerHTML = `
+                        <div class="result-icon">✅</div>
+                        <div class="result-title">可以同食</div>
+                        <p><strong>${a}</strong> 与 <strong>${b}</strong> 可以搭配食用</p>
+                        <p style="margin-top:0.5rem;color:#1e8449;">${compatFound.desc}</p>
+                    `;
+                } else {
+                    result.className = "check-result warning show";
+                    result.innerHTML = `
+                        <div class="result-icon">🤔</div>
+                        <div class="result-title">暂无明确相克记录</div>
+                        <p><strong>${a}</strong> 与 <strong>${b}</strong> 未发现明确的相克关系</p>
+                        <p style="margin-top:0.5rem;color:#856404;">建议适量食用，如有特殊体质请咨询医生</p>
+                    `;
+                }
+            }
+        }
+
+        // ===== 渲染相克汇总列表 =====
+        function renderCompatSummary() {
+            const grid = document.getElementById("compatGrid");
+            const items = [];
+            vegetables.forEach(v => {
+                v.incompatible.forEach(item => {
+                    items.push({
+                        type: "danger",
+                        pair: `${v.name} + ${item.food}`,
+                        reason: item.reason
+                    });
+                });
+            });
+            // 取前18条展示
+            grid.innerHTML = items.slice(0, 18).map(item => `
+                <div class="compat-card ${item.type}">
+                    <div class="pair">${item.pair}</div>
+                    <div class="reason">${item.reason}</div>
+                </div>
+            `).join("");
+        }
+
+        // ===== 蔬菜猜谜问答 =====
+        let quizScore = 0, quizTotal = 0, quizStreak = 0;
+        let quizAnswer = null, quizLocked = false;
+
+        function makeQuestion() {
+            const answer = vegetables[Math.floor(Math.random() * vegetables.length)];
+            const options = [answer];
+            while (options.length < 4 && options.length < vegetables.length) {
+                const c = vegetables[Math.floor(Math.random() * vegetables.length)];
+                if (!options.find(o => o.name === c.name)) options.push(c);
+            }
+            options.sort(() => Math.random() - 0.5);
+            quizAnswer = answer;
+            quizLocked = false;
+
+            document.getElementById("quizQuestion").textContent =
+                `我是「${answer.category}」家族的一员，老家在${answer.origin}，${answer.season}最当季。\n` +
+                `我的营养亮点：${answer.nutrition.slice(0, 2).join("、")}。\n` +
+                `常吃我能${answer.benefits.slice(0, 2).join("、")}。\n\n猜猜我是谁？`;
+
+            document.getElementById("quizOptions").innerHTML = options.map(o =>
+                `<button class="quiz-option" onclick="pickOption('${o.name}')">${o.emoji} ${o.name}</button>`
+            ).join("");
+            const fb = document.getElementById("quizFeedback");
+            fb.className = "quiz-feedback";
+            fb.innerHTML = "";
+            document.getElementById("quizNextBtn").style.display = "none";
+        }
+
+        function pickOption(name) {
+            if (quizLocked) return;
+            quizLocked = true;
+            quizTotal++;
+            const right = name === quizAnswer.name;
+            if (right) { quizScore += 10; quizStreak++; } else { quizStreak = 0; }
+
+            const btns = document.querySelectorAll("#quizOptions .quiz-option");
+            btns.forEach(b => {
+                b.disabled = true;
+                if (b.textContent.indexOf(quizAnswer.name) >= 0) b.classList.add("correct");
+            });
+            if (!right) {
+                btns.forEach(b => { if (b.textContent.indexOf(name) >= 0) b.classList.add("wrong"); });
+            }
+
+            const fb = document.getElementById("quizFeedback");
+            fb.className = "quiz-feedback show";
+            fb.innerHTML = right
+                ? `<div>🎉 <strong>答对啦！</strong>就是「${quizAnswer.name}」，+10 分！</div><div>🎲 冷知识：${quizAnswer.funFact}</div>`
+                : `<div>❌ 答错啦，正确答案是「${quizAnswer.name}」。</div><div>🎲 冷知识：${quizAnswer.funFact}</div>`;
+
+            document.getElementById("quizScore").textContent = quizScore;
+            document.getElementById("quizTotal").textContent = quizTotal;
+            document.getElementById("quizStreak").textContent = quizStreak;
+            document.getElementById("quizNextBtn").style.display = "block";
+        }
+
+        function nextQuestion() { makeQuestion(); }
+
+        function resetQuiz() {
+            quizScore = 0; quizTotal = 0; quizStreak = 0;
+            document.getElementById("quizScore").textContent = 0;
+            document.getElementById("quizTotal").textContent = 0;
+            document.getElementById("quizStreak").textContent = 0;
+            makeQuestion();
+        }
+
+        // ===== 蔬菜记忆翻牌 =====
+        let memTargetPairs = 8, memFirst = null, memLock = false;
+        let memPairs = 0, memSteps = 0, memSeconds = 0, memTimer = null;
+
+        function startMemory(pairs) {
+            if (typeof pairs === "number") memTargetPairs = pairs;
+            if (!vegetables.length) return;
+            document.querySelectorAll(".mem-diff-btn").forEach(b =>
+                b.classList.toggle("active", Number(b.dataset.pairs) === memTargetPairs));
+            clearInterval(memTimer);
+            memTimer = null;
+            memFirst = null; memLock = false; memPairs = 0; memSteps = 0; memSeconds = 0;
+            document.getElementById("memSteps").textContent = 0;
+            document.getElementById("memPairs").textContent = 0;
+            document.getElementById("memTarget").textContent = memTargetPairs;
+            document.getElementById("memTime").textContent = 0;
+            document.getElementById("memResult").innerHTML = "";
+
+            const picks = [...vegetables].sort(() => Math.random() - 0.5).slice(0, memTargetPairs);
+            const deck = [...picks, ...picks].sort(() => Math.random() - 0.5);
+            const cols = memTargetPairs > 8 ? 6 : 4;
+            const grid = document.getElementById("memGrid");
+            grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            grid.innerHTML = deck.map(c => `
+                <div class="mem-cell" data-name="${c.name}" onclick="onMemCard(this)">
+                    <div class="mem-inner">
+                        <div class="mem-face mem-back">🥬</div>
+                        <div class="mem-face mem-front"><img src="${c.image}" alt="${c.name}" loading="lazy"></div>
+                    </div>
+                </div>`).join("");
+        }
+
+        function onMemCard(el) {
+            if (memLock || el.classList.contains("flipped") || el.classList.contains("matched")) return;
+            if (!memTimer && memPairs < memTargetPairs) {
+                memTimer = setInterval(() => {
+                    memSeconds++;
+                    document.getElementById("memTime").textContent = memSeconds;
+                }, 1000);
+            }
+            el.classList.add("flipped");
+            if (!memFirst) { memFirst = el; return; }
+
+            const a = memFirst, b = el;
+            memFirst = null;
+            memSteps++;
+            document.getElementById("memSteps").textContent = memSteps;
+
+            if (a.dataset.name === b.dataset.name) {
+                a.classList.add("matched");
+                b.classList.add("matched");
+                memPairs++;
+                document.getElementById("memPairs").textContent = memPairs;
+                if (memPairs === memTargetPairs) {
+                    clearInterval(memTimer);
+                    memTimer = null;
+                    document.getElementById("memResult").innerHTML =
+                        `🎉 通关！用时 <strong>${memSeconds}</strong> 秒，共 <strong>${memSteps}</strong> 步，点「重新开始」再来一局！`;
+                }
+            } else {
+                memLock = true;
+                setTimeout(() => { a.classList.remove("flipped"); b.classList.remove("flipped"); memLock = false; }, 800);
+            }
+        }
+
+        // ===== 初始化（从独立 JSON 文件异步加载蔬菜数据） =====
+        function loadData() {
+            fetch("vegetables.json")
+                .then(res => {
+                    if (!res.ok) throw new Error("HTTP " + res.status);
+                    return res.json();
+                })
+                .then(data => {
+                    vegetables = data;
+                    renderCategories();
+                    renderVegetables();
+                    renderCompatSummary();
+                    makeQuestion();
+                    startMemory();
+                })
+                .catch(err => {
+                    document.getElementById("vegetableGrid").innerHTML =
+                        `<div class="no-result">😕 蔬菜数据加载失败（${err.message}）<br><br>请通过本地服务器访问本站，或确认 vegetables.json 与 index.html 在同一目录。</div>`;
+                    document.getElementById("quizQuestion").textContent = "😕 数据加载失败，无法开始问答";
+                    document.getElementById("memGrid").innerHTML =
+                        `<div class="no-result">😕 数据加载失败，无法开始游戏</div>`;
+                });
+        }
+        loadData();
+    </script>
+
+</body>
+</html>
